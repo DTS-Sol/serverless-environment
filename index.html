@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+  </head>
+  <body>
+    <h1 id="serverless-environment-with-the-serverless-framework">Serverless Environment with the Serverless Framework</h1>
+    <p>Serverless Computing is a suited solution for those big applications that need to hanlde big amounts of users and/or requests every time. It allows to decouple our application in small modules (aka <em>microservices</em>), in which every one of them are in charge of a single task, thus reducing the complexity of mantaining one big app to mantain small services.</p>
+    <p>A core benefit of doing this is that in this way we can duplicate the services that are being requested a lot by users and then balance those request between the replicas of that service. What we gain with this:</p>
+    <ul>
+      <li>Duplicate only the service in use and not the whole application.</li>
+      <li>Reduce costs by paying only for the duplicated services that are most requested.</li>
+      <li>Deploying time is reduced in every update due to re-deploying only the service we need to update instead of the entire app.</li>
+    </ul>
+    <p>It may be with serverless containers (AWS Fargate) or serverless functions (AWS Lambda), whatever suits the best for you and depending on your needs, but a migration to a serverless architecture is a good invest to consider to in the long term.</p>
+    <hr>
+    <p>In a previous chapter we talked about building serverless applications with the AWS Cloud, which is the cloud of our choice here in DTS Solutions. We focused in the service called <strong>Lambda</strong> and you could see all the components involved in lifting up an environment to get running a serverless application.</p>
+    <p>It could be an overhead to manually set up every piece of your app, including IAM policies, API Gateway methods and resources, Lambda functions, uploading your code, etc. And while you could use the AWS CLI for set up your environment, you would still need to explicitely create every resource, not forgetting it is too verbose.</p>
+    <h2 id="introducing-the-serverless-framework">Introducing the Serverless Framework</h2>
+    <p>The Serverless Framework is a technology that allows us to easily build, deploy and scale serverless applications to different cloud vendors. It is an open source project written in NodeJS.</p>
+    <p>In this blog we will be focusing on installing it on our machine and deploying our first serverless application to our AWS account.</p>
+    <p><strong>Prerequisites</strong></p>
+    <p>For this tutorial we need:</p>
+    <ul>
+      <li>NodeJS installed (LTS version recommended)</li>
+      <li>An AWS account</li>
+      <li>Have set up the AWS CLI</li>
+      <li>Set up our AWS Access Key and Secret Access Key on our computer</li>
+    </ul>
+    <p>We learnt to set up our AWS credentials and the AWS CLI in the previous chapters to interact with AWS resources, so you will be probably more than ready with this. Though we are not going to use the AWS CLI for creating any resource, it is still necessary to let the serverless framework create them for us.</p>
+    <h3 id="installation">Installation</h3>
+    <p>The installation part is very easy, you just need to enter one single command:</p>
+    <pre><code class="lang-bash">$ npm <span class="hljs-keyword">install</span> -g serverless
+    </code></pre>
+    <p>Once the installation finishes, we can then verify it by typing the next command:</p>
+    <pre><code class="lang-bash">$ serverless <span class="hljs-comment">--version</span>
+    </code></pre>
+    <p>Or just:</p>
+    <pre><code class="lang-bash">$ sls <span class="hljs-comment">--version</span>
+    </code></pre>
+    <p>For the short version. If all went right, We might expect an output like this:</p>
+    <p><img src="https://i.imgur.com/5cjqUPk.png" alt="sls version"></p>
+    <p>Now we are ready to create our serverless application!</p>
+    <h3 id="creating-a-serverless-framework-project">Creating a Serverless Framework Project</h3>
+    <p>To start building our app, we first need to initialize a Serverless Framework Project, for this we need to specify the name of our project and the name of the template containing the SDK we will be using within the app.</p>
+    <p>But before doing this, lets create the directory that will contain our project:</p>
+    <pre><code class="lang-bash">$ <span class="hljs-keyword">mkdir</span> serverless-<span class="hljs-keyword">app</span>
+$ <span class="hljs-keyword">cd</span> serverless-<span class="hljs-keyword">app</span>/
+    </code></pre>
+    <p>Now, for this tutorial we are going to use the NodeJS template and the name is going to be <em>serverless-app</em>:</p>
+    <pre><code class="lang-bash"><span class="hljs-comment">$</span> <span class="hljs-comment">sls</span> <span class="hljs-comment">create</span> <span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">name</span> <span class="hljs-comment">serverless</span><span class="hljs-literal">-</span><span class="hljs-comment">app</span> <span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">template</span> <span class="hljs-comment">aws</span><span class="hljs-literal">-</span><span class="hljs-comment">nodejs</span>
+    </code></pre>
+    <p>We will have an output like this:</p>
+    <p><img src="https://i.imgur.com/ABZLaUS.png" alt="Serverless project created"></p>
+    <p>Now if we check the directory, we will notice that two files were created, a <em>handler.js</em> and a <em>serverless.yml</em> file:</p>
+    <ul>
+      <li>The <em>serverless.yml</em> file contains all the information in concerning to our serverless project, it also contains all the needed resources for our app to work, same ones that it will be deploying to our AWS account.</li>
+      <li>The <em>handle.js</em> file is just a javascript file which has the code that we will be deploying. It could be a more complex file structure but for terms of simplicity we are going to use this file.</li>
+    </ul>
+    <h3 id="building-the-serverless-application">Building the serverless application</h3>
+    <p>Now we have set up our components, lets modify the <em>serverlss.yml</em> and <em>handle.js</em> files to match our desired app.</p>
+    <p>The <em>serverless.yml</em> file will look like this:</p>
+    <pre><code class="lang-yaml"><span class="hljs-attribute">service</span>: serverless-app
+
+<span class="http"><span class="hljs-attribute">frameworkVersion</span>: '2'
+
+<span class="less"><span class="hljs-attribute">provider</span>:
+  <span class="hljs-attribute">name</span>: aws
+  <span class="hljs-attribute">runtime</span>: nodejs12.x
+  <span class="hljs-attribute">memorySize</span>: <span class="hljs-number">256</span>
+  <span class="hljs-attribute">stage</span>: dev
+
+<span class="hljs-attribute">functions</span>:
+  <span class="hljs-attribute">hello</span>:
+    <span class="hljs-attribute">handler</span>: handler.hello
+    <span class="hljs-attribute">events</span>:
+      - <span class="hljs-attribute">http</span>:
+          <span class="hljs-attribute">method</span>: GET
+          <span class="hljs-attribute">path</span>: /hello</span></span>
+    </code></pre>
+    <p>With this we are saying that we want our serverless app to have an specific configuration for the Lambda functions, and that we have one function called <em>hello</em> which has a <em>handler.hello</em> handler function and it will be called through a GET request on the resource named <em>hello</em>.</p>
+    <p>For our <em>handler.js</em> file we want to keep it simple:</p>
+    <pre><code class="lang-javascript"><span class="hljs-built_in">module</span>.exports.hello = <span class="hljs-keyword">async</span> event =&gt; {
+  <span class="hljs-keyword">return</span> {
+    <span class="hljs-attr">statusCode</span>: <span class="hljs-number">200</span>,
+    <span class="hljs-attr">body</span>: <span class="hljs-built_in">JSON</span>.stringify({
+      <span class="hljs-attr">message</span>: <span class="hljs-string">'Hello World from Serverless Framework!!'</span>,
+    }),
+  };
+};
+    </code></pre>
+    <h3 id="deploying-and-testing">Deploying and testing</h3>
+    <p>We are now ready to deploy our app, this is done by typing this command:</p>
+    <pre><code class="lang-bash"><span class="hljs-variable">$ </span>sls deploy -v
+    </code></pre>
+    <p>With the -v flag we ask for a verbose output to see the details.</p>
+    <p>If we see the output:</p>
+    <p><img src="https://i.imgur.com/yEzkx0J.png" alt="sls deploy"></p>
+    <p>We can appreciate that in fact, the Serverless Framework uses AWS CloudFormation behind the scenes to deploy the resources to our AWS Cloud, thus making the deploy process very easy for us by just defining a yml file containing all of our serverless components without the verbosity of CloudFormation templates.</p>
+    <p>Now, if the process succeded, we will be prompt with the endpoint for the AWS Lambda function we just deployed:</p>
+    <p><img src="https://i.imgur.com/beHnI8t.png" alt="Lambda endpoint"></p>
+    <p>And now if we make a request to that endpoint through a web browser or a tool like <em>curl</em>:</p>
+    <p><img src="https://i.imgur.com/vlvTSfP.png" alt="GET Request"></p>
+    <p>We get our desired response.</p>
+    <p>And there you have it, we lifted up all the necessary AWS resources by just defining our yml file, without the need of typing by hand every command to launch any resource, just one single command to deploy our entire app.</p>
+    <p>And if we wanted to add an IAM Policy, we could just add a section to our yml file:</p>
+    <pre><code class="lang-yaml"><span class="hljs-attribute">service</span>: serverless-app
+
+<span class="http"><span class="hljs-attribute">frameworkVersion</span>: '2'
+
+<span class="less"><span class="hljs-attribute">provider</span>:
+  <span class="hljs-attribute">name</span>: aws
+  <span class="hljs-attribute">runtime</span>: nodejs12.x
+  <span class="hljs-attribute">memorySize</span>: <span class="hljs-number">256</span>
+  <span class="hljs-attribute">stage</span>: dev
+  <span class="hljs-attribute">iamRoleStatements</span>: # This section
+    - <span class="hljs-attribute">Effect</span>: Allow
+      <span class="hljs-attribute">Action</span>:
+        - <span class="hljs-attribute">sts</span>:AssumeRole
+      <span class="hljs-attribute">Resource</span>:
+        - <span class="hljs-string">'*'</span>
+
+<span class="hljs-attribute">functions</span>:
+  <span class="hljs-attribute">hello</span>:
+    <span class="hljs-attribute">handler</span>: handler.hello
+    <span class="hljs-attribute">events</span>:
+      - <span class="hljs-attribute">http</span>:
+          <span class="hljs-attribute">method</span>: GET
+          <span class="hljs-attribute">path</span>: /hello</span></span>
+    </code></pre>
+    <p>So every resource needed for our serverless application can be specified here, you just need to re-deploy.</p>
+    <p>And if we wanted to remove the stack launched by the Serverless Framework:</p>
+    <pre><code class="lang-bash">$ sls <span class="hljs-built_in">remove</span> -v
+    </code></pre>
+    <p>With this all the resources will be cleaned up preventing unexpected billing and it keeps our resources organized and under control</p>
+    <p>What are your thoughts on the Serverless Framework and on serverless applications in general? Let us know in the comments!</p>
+  </body>
+</html>
